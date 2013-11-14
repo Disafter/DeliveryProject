@@ -22,10 +22,10 @@ struct planet
 
 struct shuttle
 {
-	char cargoType[51];
+	char cargoType[101];
 	int pickupPlanet;
 	int deliveryPlanet;
-	float speed;
+	long speed;
 	float pickupWeight;
 	float deliveryWeight;
 	float earthWeight;
@@ -38,13 +38,16 @@ struct shuttle
 planet planetArray[8];
 shuttle myShuttle;
 
-int menuChoice;
+bool continueRunning = true;
 
-//function prototypes;
+const int INPUT_SIZE = 101;
+char input[INPUT_SIZE];
+char answer[INPUT_SIZE];
+
+
 void getPlanetData();
 shuttle getUserInput();
 void formatInput();
-void checkDeliveryPossibility();
 void outputToFile();
 
 
@@ -55,10 +58,27 @@ int _tmain(int argc, _TCHAR* argv[])
 
 
 	getPlanetData();
-	myShuttle = getUserInput();
-	formatInput();
-	//checkDeliveryPossibility();
-	outputToFile();
+
+	while(continueRunning){
+		myShuttle = getUserInput();
+		formatInput();
+		outputToFile();
+
+		answer[0] = ' ';
+		while(toupper(answer[0]) != 'Y' && toupper(answer[0]) != 'N'){
+			cout<<"Would you like to continue entering shipping records? ";
+			cin.getline(input, INPUT_SIZE);
+			answer[0] = input[0];
+			
+
+			if(toupper(answer[0]) == 'N'){
+				continueRunning = false;
+			}
+			else if(toupper(answer[0]) == 'Y'){
+				continueRunning = true;
+			}
+		}
+	}
 
 
 	system("pause");
@@ -82,8 +102,6 @@ shuttle getUserInput(){
 	shipdata.speed = 0;
 	shipdata.pickupWeight = 0;
 
-	const int INPUT_SIZE = 50;
-	char input[INPUT_SIZE];
 
 	cout<<"What is the Cargo Type? "<<endl;
 	cin.getline(shipdata.cargoType, INPUT_SIZE);
@@ -115,6 +133,10 @@ shuttle getUserInput(){
 		cout<<"8 - Neptune"<<endl;
 		cin.getline(input, INPUT_SIZE);
 		shipdata.deliveryPlanet = atoi(input);
+		if(shipdata.deliveryPlanet == shipdata.pickupPlanet){
+			shipdata.deliveryPlanet = 0;
+			cout<<endl<<"**You cannot deliver to the same planet you picked up from.**"<<endl<<endl;
+		}
 	}
 
 
@@ -122,66 +144,42 @@ shuttle getUserInput(){
 		cout<<"What is the weight of the cargo in pick-up planet pounds? "<<endl;
 		cin.getline(input, INPUT_SIZE);
 		shipdata.pickupWeight = atof(input);
+		if(shipdata.pickupWeight > 20000){
+			shipdata.pickupWeight = 0;
+			cout<<endl<<"**Your ship cannot carry more than 20,000 pounds in Earth weight**!"<<endl<<endl;
+		}
 	}
+
+
 	while(shipdata.speed<=0){
-		cout<<"At what speed will your shuttle travel? "<<endl;
+		cout<<"At what speed will your shuttle travel in miles per hour? "<<endl;
 		cin.getline(input, INPUT_SIZE);
-		shipdata.speed = atof(input);
+		shipdata.speed = atol(input);
+		if(shipdata.speed > 670616629){
+			shipdata.speed = 0;
+			cout<<endl<<"**No ship can travel faster than light! (670616629 mph)**"<<endl<<endl;
+		}
 	}
-
-	cout<<setprecision(3)<<fixed<<showpoint<<"Here is your input."<<endl; //take this out when finished
-	cout<<shipdata.cargoType<<endl;
-	cout<<shipdata.pickupPlanet<<endl;
-	cout<<shipdata.deliveryPlanet<<endl;
-	cout<<shipdata.pickupWeight<<endl;
-	cout<<shipdata.speed<<endl;
-
-
 
 	return shipdata;
 }
 
 
-/*example output of planet file after successful input
-
-for(int i = MERCURY; i <= NEPTUNE; i++){
-cout<<planetArray[i].name<<" ";
-cout<<planetArray[i].distance<<" ";
-cout<<planetArray[i].surfaceGravity<<" "<<endl;
-}
-
-*/
-
 void formatInput(){
 	myShuttle.earthWeight = myShuttle.pickupWeight * (1 / planetArray[myShuttle.pickupPlanet - 1].surfaceGravity);
 	myShuttle.deliveryWeight = myShuttle.earthWeight * planetArray[myShuttle.deliveryPlanet - 1].surfaceGravity;
-
-	cout<<"The earth weight is "<<myShuttle.earthWeight<<" pounds."<<endl;
-	if(myShuttle.earthWeight >= 20000){
-		cout<<"The cargo load is too heavy!"<<endl; 
-		//RETURN TO BEGINNING OF DATA ENTRY OR REPROMPT WEIGHT ENTRY, COULD DO THIS CHECK AFTER ALL INPUT, AND THEN REPROMPT THE WEIGHT ENTRY IF NECESSARY
-	}
-	cout<<"The weight on the delivery planet will be "<<myShuttle.deliveryWeight<<" pounds."<<endl;
-
-
-
 	myShuttle.totalTravelDistance = abs(planetArray[myShuttle.pickupPlanet - 1].distance - planetArray[myShuttle.deliveryPlanet - 1].distance);
-	cout<<"The total travel distance is "<<myShuttle.totalTravelDistance<<" million miles."<<endl;
-
 	myShuttle.travelHours =  (myShuttle.totalTravelDistance * 1000000) / myShuttle.speed;
-	cout<<"The total travel time in hours is "<<myShuttle.travelHours<<"."<<endl;
 	myShuttle.travelDays = myShuttle.travelHours / 24;
-	cout<<"The total travel time in days is "<<myShuttle.travelDays<<"."<<endl;
 	myShuttle.travelYears = myShuttle.travelDays / 365;
-	cout<<"The total travel time in years is "<<myShuttle.travelYears<<"."<<endl;
 }
 
 
 void outputToFile(){
+	cout<<endl<<"Now outputting shipment data to Delivery_Report.txt..."<<endl<<endl;
 	ofstream outputFile;
-	outputFile.open("Delivery_Report.txt"
-		, ios::app);
-	
+	outputFile.open("Delivery_Report.txt", ios::app);
+
 	if(outputFile.fail()){
 		outputFile.open("Delivery_Report.txt");
 	}
@@ -190,18 +188,16 @@ void outputToFile(){
 
 	outputFile << endl << endl;
 
-	outputFile<<"You are transporting "<<myShuttle.cargoType<<"."<<endl;
+	outputFile<<"You delivered "<<myShuttle.cargoType<<"."<<endl;
 
-	outputFile<<fixed<<setprecision(3)<<"The earth weight is "<<myShuttle.earthWeight<<" pounds."<<endl;
-	
-	outputFile<<"The weight on the delivery planet will be "<<myShuttle.deliveryWeight<<" pounds."<<endl;
+	outputFile<<fixed<<setprecision(3)<<"The weight on the pick-up planet is "<<myShuttle.pickupWeight<<" pounds."<<endl;
+	outputFile<<"The earth weight is "<<myShuttle.earthWeight<<" pounds."<<endl;
+	outputFile<<"The weight on the delivery planet is "<<myShuttle.deliveryWeight<<" pounds."<<endl;
 
 	outputFile<<"The total travel distance is "<<myShuttle.totalTravelDistance<<" million miles."<<endl;
 
 	outputFile<<"The total travel time in hours is "<<myShuttle.travelHours<<"."<<endl;
-
 	outputFile<<"The total travel time in days is "<<myShuttle.travelDays<<"."<<endl;
-
 	outputFile<<"The total travel time in years is "<<myShuttle.travelYears<<"."<<endl;
 
 	outputFile.close();
